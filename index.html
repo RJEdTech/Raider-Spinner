@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raider Spinner</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0f0f1a;
+    color: #eee;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+  .container { max-width: 700px; margin: 0 auto; }
+  .header { text-align: center; margin-bottom: 24px; }
+  .header .sub { font-size: 11px; text-transform: uppercase; letter-spacing: 3px; color: #666; margin-bottom: 4px; }
+  .header h1 { font-size: 28px; font-weight: 800; background: linear-gradient(135deg, #ff4757, #ffa502, #ff6348); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header .tagline { font-size: 12px; color: #666; margin-top: 4px; }
+
+  .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  label.section-label { font-size: 12px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 8px; }
+  textarea {
+    width: 100%; min-height: 100px; padding: 12px; border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3);
+    color: #eee; font-size: 14px; font-family: inherit; resize: vertical; outline: none;
+  }
+  textarea::placeholder { color: #555; }
+
+  .btn {
+    padding: 8px 20px; border-radius: 8px; border: none; cursor: pointer;
+    background: linear-gradient(135deg, #ff4757, #ff6348); color: #fff;
+    font-weight: 700; font-size: 13px; font-family: inherit;
+  }
+  .btn:hover { opacity: 0.9; }
+  .btn-ghost {
+    padding: 4px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);
+    background: transparent; color: #ff4757; cursor: pointer; font-size: 12px;
+    font-family: inherit; font-weight: 600;
+  }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+  .tab {
+    padding: 8px 18px; border-radius: 8px; border: 1px solid transparent; cursor: pointer;
+    font-size: 13px; font-weight: 700; font-family: inherit;
+    background: rgba(255,255,255,0.04); color: #888;
+  }
+  .tab.active { background: rgba(255,71,87,0.15); color: #ff4757; border-color: rgba(255,71,87,0.3); }
+
+  .options-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 10px 14px; border-radius: 8px; background: rgba(255,255,255,0.03); margin-bottom: 16px; }
+  .options-bar label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; color: #aaa; }
+  .options-bar input[type="checkbox"] { accent-color: #ff4757; }
+
+  .result-banner {
+    text-align: center; margin-bottom: 16px; padding: 14px 20px; border-radius: 10px;
+    background: linear-gradient(135deg, rgba(255,71,87,0.12), rgba(255,165,2,0.08));
+    border: 1px solid rgba(255,71,87,0.2); display: none;
+  }
+  .result-banner.show { display: block; }
+  .result-banner .label { font-size: 11px; color: #ff6348; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 2px; }
+  .result-banner .name { font-size: 26px; font-weight: 800; color: #fff; }
+
+  .wheel-area { position: relative; width: 340px; max-width: 90vw; margin: 0 auto; aspect-ratio: 1; }
+  .pointer {
+    position: absolute; top: -2px; left: 50%; transform: translateX(-50%); z-index: 10;
+    width: 0; height: 0;
+    border-left: 12px solid transparent; border-right: 12px solid transparent;
+    border-top: 22px solid #ff4757;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  }
+  .wheel-wrapper {
+    width: 100%; height: 100%; border-radius: 50%; overflow: hidden; cursor: pointer;
+    position: relative;
+  }
+  .wheel-wrapper.spinning { cursor: default; }
+  .wheel {
+    width: 100%; height: 100%; border-radius: 50%; position: relative;
+  }
+  .wheel.animate {
+    transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+  }
+  .center-dot {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: 40px; height: 40px; border-radius: 50%;
+    background: radial-gradient(circle, #fff, #e0e0e0);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 5; pointer-events: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px; font-weight: 800; color: #555; letter-spacing: 0.5px;
+  }
+  .spin-hint { text-align: center; font-size: 13px; color: #666; margin-top: 10px; }
+
+  .history { margin-top: 20px; padding: 14px; border-radius: 10px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); }
+  .history .title { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+  .history .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .history .tag { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; background: rgba(255,255,255,0.05); color: #888; }
+  .history .tag.latest { background: rgba(255,71,87,0.15); color: #ff4757; }
+
+  .group-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 14px; border-radius: 8px; background: rgba(255,255,255,0.03); margin-bottom: 16px; }
+  .group-controls label { font-size: 13px; color: #aaa; }
+  .size-btns { display: flex; gap: 4px; }
+  .size-btn {
+    width: 36px; height: 36px; border-radius: 8px; border: none; cursor: pointer;
+    font-size: 14px; font-weight: 700; font-family: inherit;
+    background: rgba(255,255,255,0.06); color: #888;
+  }
+  .size-btn.active { background: rgba(255,71,87,0.2); color: #ff4757; }
+  .groups-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+  .group-card { padding: 14px; border-radius: 10px; }
+  .group-card .group-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+  .group-card .member { font-size: 14px; color: #ddd; padding: 3px 0; font-weight: 500; }
+  .groups-summary { text-align: center; margin-top: 14px; font-size: 12px; color: #666; }
+
+  .footer { text-align: center; margin-top: 36px; padding-top: 14px; font-size: 10px; color: #444; border-top: 1px solid rgba(255,255,255,0.04); }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="sub">Regis Jesuit High School</div>
+    <h1>Raider Spinner</h1>
+    <div class="tagline">Random name picker &amp; group maker · No ads · No tracking · No data stored</div>
+  </div>
+
+  <div class="card">
+    <label class="section-label">Student Names</label>
+    <textarea id="nameInput" placeholder="Paste names here — one per line or separated by commas"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px;align-items:center;">
+      <button class="btn" id="loadBtn">Load Names</button>
+      <span id="nameCount" style="font-size:12px;color:#888;"></span>
+    </div>
+  </div>
+
+  <div id="toolArea" class="hidden">
+    <div class="tabs">
+      <button class="tab active" id="tabSpinner" data-tab="spinner">Spinner</button>
+      <button class="tab" id="tabGroups" data-tab="groups">Group Maker</button>
+    </div>
+
+    <div id="spinnerPanel">
+      <div class="options-bar">
+        <label><input type="checkbox" id="removePicked"> Remove after picked</label>
+        <button class="btn-ghost hidden" id="resetBtn">Reset</button>
+      </div>
+
+      <div class="result-banner" id="resultBanner">
+        <div class="label">Selected</div>
+        <div class="name" id="resultName"></div>
+      </div>
+
+      <div class="wheel-area" id="wheelArea">
+        <div class="pointer"></div>
+        <div class="wheel-wrapper" id="wheelWrapper">
+          <div class="wheel" id="wheel"></div>
+          <div class="center-dot">SPIN</div>
+        </div>
+      </div>
+      <div class="spin-hint" id="spinHint">Tap the wheel to spin</div>
+
+      <div id="emptyMsg" class="hidden" style="text-align:center;padding:40px;color:#888;font-size:14px;"></div>
+
+      <div class="history hidden" id="historyPanel">
+        <div class="title">Pick History</div>
+        <div class="tags" id="historyTags"></div>
+      </div>
+    </div>
+
+    <div id="groupsPanel" class="hidden">
+      <div class="group-controls">
+        <label>Per group:</label>
+        <div class="size-btns" id="sizeBtns"></div>
+        <button class="btn" style="margin-left:auto;" id="genBtn">Generate</button>
+      </div>
+      <div class="groups-grid" id="groupsGrid"></div>
+      <div class="groups-summary hidden" id="groupsSummary"></div>
+    </div>
+  </div>
+
+  <div class="footer">Raider Spinner · Built for RJ teachers · No data leaves your browser</div>
+</div>
+
+<script>
+(function() {
+  var COLORS = [
+    "#e74c3c","#3498db","#2ecc71","#f39c12","#9b59b6",
+    "#1abc9c","#e67e22","#2980b9","#27ae60","#c0392b",
+    "#8e44ad","#16a085","#d35400","#2c3e50","#f1c40f",
+    "#7f8c8d","#e84393","#00b894","#6c5ce7","#fdcb6e"
+  ];
+
+  var allNames = [];
+  var pool = [];
+  var history = [];
+  var spinning = false;
+  var currentRotation = 0;
+  var groupSize = 2;
+
+  // DOM refs
+  var nameInput = document.getElementById("nameInput");
+  var loadBtn = document.getElementById("loadBtn");
+  var nameCount = document.getElementById("nameCount");
+  var toolArea = document.getElementById("toolArea");
+  var tabSpinner = document.getElementById("tabSpinner");
+  var tabGroups = document.getElementById("tabGroups");
+  var spinnerPanel = document.getElementById("spinnerPanel");
+  var groupsPanel = document.getElementById("groupsPanel");
+  var removePickedCb = document.getElementById("removePicked");
+  var resetBtn = document.getElementById("resetBtn");
+  var resultBanner = document.getElementById("resultBanner");
+  var resultName = document.getElementById("resultName");
+  var wheelArea = document.getElementById("wheelArea");
+  var wheelWrapper = document.getElementById("wheelWrapper");
+  var wheel = document.getElementById("wheel");
+  var spinHint = document.getElementById("spinHint");
+  var emptyMsg = document.getElementById("emptyMsg");
+  var historyPanel = document.getElementById("historyPanel");
+  var historyTags = document.getElementById("historyTags");
+  var sizeBtns = document.getElementById("sizeBtns");
+  var genBtn = document.getElementById("genBtn");
+  var groupsGrid = document.getElementById("groupsGrid");
+  var groupsSummary = document.getElementById("groupsSummary");
+
+  // LOAD NAMES
+  loadBtn.addEventListener("click", function() {
+    var raw = nameInput.value;
+    allNames = raw.split(/[\n,]+/).map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 0; });
+    if (allNames.length === 0) return;
+    pool = allNames.slice();
+    history = [];
+    nameCount.textContent = allNames.length + " name" + (allNames.length !== 1 ? "s" : "") + " loaded";
+    toolArea.classList.remove("hidden");
+    resultBanner.classList.remove("show");
+    historyPanel.classList.add("hidden");
+    historyTags.innerHTML = "";
+    currentRotation = 0;
+    buildWheel();
+    buildSizeBtns();
+    updateSpinnerUI();
+  });
+
+  // TABS
+  tabSpinner.addEventListener("click", function() {
+    tabSpinner.classList.add("active");
+    tabGroups.classList.remove("active");
+    spinnerPanel.classList.remove("hidden");
+    groupsPanel.classList.add("hidden");
+  });
+  tabGroups.addEventListener("click", function() {
+    tabGroups.classList.add("active");
+    tabSpinner.classList.remove("active");
+    groupsPanel.classList.remove("hidden");
+    spinnerPanel.classList.add("hidden");
+  });
+
+  // REMOVE PICKED checkbox
+  removePickedCb.addEventListener("change", function() {
+    doResetPool();
+  });
+
+  // RESET
+  resetBtn.addEventListener("click", function() {
+    doResetPool();
+  });
+
+  function doResetPool() {
+    pool = allNames.slice();
+    history = [];
+    resultBanner.classList.remove("show");
+    historyPanel.classList.add("hidden");
+    historyTags.innerHTML = "";
+    currentRotation = 0;
+    buildWheel();
+    updateSpinnerUI();
+  }
+
+  // BUILD WHEEL
+  function buildWheel() {
+    wheel.innerHTML = "";
+    wheel.classList.remove("animate");
+    wheel.style.transition = "none";
+    wheel.style.transform = "rotate(0deg)";
+    currentRotation = 0;
+
+    if (pool.length < 2) return;
+
+    var n = pool.length;
+    var sliceAngle = 360 / n;
+
+    var stops = [];
+    for (var i = 0; i < n; i++) {
+      var start = (i * sliceAngle).toFixed(2);
+      var end = ((i + 1) * sliceAngle).toFixed(2);
+      stops.push(COLORS[i % COLORS.length] + " " + start + "deg " + end + "deg");
+    }
+    wheel.style.background = "conic-gradient(from 0deg, " + stops.join(", ") + ")";
+    wheel.style.borderRadius = "50%";
+
+    for (var i = 0; i < n; i++) {
+      var midAngle = sliceAngle * i + sliceAngle / 2;
+      // Flip text on left half so it always reads outward from center
+      var onLeft = (midAngle % 360) > 90 && (midAngle % 360) < 270;
+      var labelR = onLeft ? 0.32 : 0.38;
+      var radians = (midAngle - 90) * Math.PI / 180;
+      var x = 50 + labelR * 100 * Math.cos(radians);
+      var y = 50 + labelR * 100 * Math.sin(radians);
+      var textRotation = onLeft ? midAngle + 180 : midAngle;
+
+      var el = document.createElement("div");
+      el.style.position = "absolute";
+      el.style.left = x + "%";
+      el.style.top = y + "%";
+      el.style.transform = "translate(-50%,-50%) rotate(" + textRotation + "deg)";
+      el.style.color = "white";
+      el.style.fontWeight = "700";
+      el.style.textShadow = "0 1px 3px rgba(0,0,0,0.5)";
+      el.style.whiteSpace = "nowrap";
+      el.style.pointerEvents = "none";
+      el.style.zIndex = "2";
+      var fs = n > 20 ? 8 : n > 14 ? 9 : n > 8 ? 11 : n > 4 ? 13 : 15;
+      el.style.fontSize = fs + "px";
+      var display = pool[i];
+      if (display.length > 12) display = display.slice(0, 10) + "\u2026";
+      el.textContent = display;
+      wheel.appendChild(el);
+    }
+  }
+
+  function updateSpinnerUI() {
+    var isRemove = removePickedCb.checked;
+
+    if (isRemove && pool.length < allNames.length) {
+      resetBtn.classList.remove("hidden");
+      resetBtn.textContent = "Reset (" + pool.length + "/" + allNames.length + " left)";
+    } else {
+      resetBtn.classList.add("hidden");
+    }
+
+    if (pool.length >= 2) {
+      wheelArea.classList.remove("hidden");
+      emptyMsg.classList.add("hidden");
+      spinHint.classList.remove("hidden");
+      spinHint.textContent = "Tap the wheel to spin";
+    } else if (pool.length === 1) {
+      wheelArea.classList.add("hidden");
+      spinHint.classList.add("hidden");
+      emptyMsg.classList.remove("hidden");
+      emptyMsg.innerHTML = "Only <strong style='color:#ff4757'>" + pool[0] + "</strong> remains!";
+      var rb = document.createElement("button");
+      rb.className = "btn-ghost";
+      rb.style.marginTop = "12px";
+      rb.style.display = "block";
+      rb.style.marginLeft = "auto";
+      rb.style.marginRight = "auto";
+      rb.textContent = "Reset Pool";
+      rb.addEventListener("click", doResetPool);
+      emptyMsg.appendChild(document.createElement("br"));
+      emptyMsg.appendChild(rb);
+    } else {
+      wheelArea.classList.add("hidden");
+      spinHint.classList.add("hidden");
+      emptyMsg.classList.remove("hidden");
+      emptyMsg.innerHTML = "All names picked!";
+      var rb2 = document.createElement("button");
+      rb2.className = "btn-ghost";
+      rb2.style.marginTop = "12px";
+      rb2.style.display = "block";
+      rb2.style.marginLeft = "auto";
+      rb2.style.marginRight = "auto";
+      rb2.textContent = "Reset Pool";
+      rb2.addEventListener("click", doResetPool);
+      emptyMsg.appendChild(document.createElement("br"));
+      emptyMsg.appendChild(rb2);
+    }
+  }
+
+  // SPIN
+  wheelWrapper.addEventListener("click", function() {
+    if (spinning || pool.length < 2) return;
+    spinning = true;
+
+    var n = pool.length;
+    var targetIdx = Math.floor(Math.random() * n);
+    var sliceAngle = 360 / n;
+
+    var targetRemainder = 360 - (targetIdx + 0.5) * sliceAngle;
+    var extraSpins = (5 + Math.floor(Math.random() * 3)) * 360;
+    var newRotation = currentRotation + extraSpins + ((targetRemainder - (currentRotation % 360)) + 360) % 360;
+
+    // Remove old transition, force reflow, then add transition and rotate
+    wheel.classList.remove("animate");
+    wheel.style.transition = "none";
+    wheel.style.transform = "rotate(" + currentRotation + "deg)";
+    void wheel.offsetHeight; // force reflow
+    wheel.style.transition = "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)";
+    wheel.style.transform = "rotate(" + newRotation + "deg)";
+    currentRotation = newRotation;
+
+    wheelWrapper.classList.add("spinning");
+    spinHint.textContent = "";
+
+    setTimeout(function() {
+      spinning = false;
+      wheelWrapper.classList.remove("spinning");
+
+      var picked = pool[targetIdx];
+      resultName.textContent = picked;
+      resultBanner.classList.add("show");
+      spinHint.textContent = "Tap the wheel to spin again";
+
+      history.unshift(picked);
+      renderHistory();
+
+      if (removePickedCb.checked) {
+        pool.splice(targetIdx, 1);
+        wheel.style.transition = "none";
+        wheel.style.transform = "rotate(0deg)";
+        currentRotation = 0;
+        void wheel.offsetHeight;
+        buildWheel();
+        updateSpinnerUI();
+      }
+    }, 4200);
+  });
+
+  function renderHistory() {
+    historyPanel.classList.remove("hidden");
+    historyTags.innerHTML = "";
+    for (var i = 0; i < history.length; i++) {
+      var span = document.createElement("span");
+      span.className = "tag" + (i === 0 ? " latest" : "");
+      span.textContent = (history.length - i) + ". " + history[i];
+      historyTags.appendChild(span);
+    }
+  }
+
+  // GROUP MAKER
+  function buildSizeBtns() {
+    sizeBtns.innerHTML = "";
+    [2, 3, 4, 5].forEach(function(n) {
+      var btn = document.createElement("button");
+      btn.className = "size-btn" + (n === groupSize ? " active" : "");
+      btn.textContent = n;
+      btn.addEventListener("click", function() {
+        groupSize = n;
+        var all = sizeBtns.querySelectorAll(".size-btn");
+        for (var j = 0; j < all.length; j++) all[j].classList.remove("active");
+        btn.classList.add("active");
+      });
+      sizeBtns.appendChild(btn);
+    });
+  }
+
+  genBtn.addEventListener("click", function() {
+    var shuffled = allNames.slice();
+    for (var i = shuffled.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = tmp;
+    }
+
+    var groups = [];
+    for (var i = 0; i < shuffled.length; i += groupSize) {
+      groups.push(shuffled.slice(i, i + groupSize));
+    }
+
+    groupsGrid.innerHTML = "";
+    for (var i = 0; i < groups.length; i++) {
+      var card = document.createElement("div");
+      card.className = "group-card";
+      var color = COLORS[i % COLORS.length];
+      card.style.background = color + "11";
+      card.style.border = "1px solid " + color + "33";
+
+      var title = document.createElement("div");
+      title.className = "group-title";
+      title.style.color = color;
+      title.textContent = "Group " + (i + 1);
+      card.appendChild(title);
+
+      for (var j = 0; j < groups[i].length; j++) {
+        var div = document.createElement("div");
+        div.className = "member";
+        div.textContent = groups[i][j];
+        card.appendChild(div);
+      }
+      groupsGrid.appendChild(card);
+    }
+
+    groupsSummary.classList.remove("hidden");
+    var text = allNames.length + " students in " + groups.length + " group" + (groups.length !== 1 ? "s" : "");
+    if (groups.length > 0 && groups[groups.length - 1].length < groupSize) {
+      text += " (last group has " + groups[groups.length - 1].length + ")";
+    }
+    groupsSummary.textContent = text;
+    genBtn.textContent = "Shuffle";
+  });
+
+})();
+</script>
+</body>
+</html>
