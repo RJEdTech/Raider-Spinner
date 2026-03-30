@@ -2,7 +2,7 @@
 
 A random name picker and group maker built for Regis Jesuit High School teachers.
 
-**[Launch Raider Spinner →](https://YOUR-USERNAME.github.io/raider-spinner/)**
+**[Launch Raider Spinner →](https://rjedtech.github.io/raider-spinner/)**
 
 ## Features
 
